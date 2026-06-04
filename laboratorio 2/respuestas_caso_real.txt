@@ -1,0 +1,286 @@
+================================================================================
+PARTE 2 – CASO REAL: RESPUESTAS
+Dataset: Accidentes de tráfico con ciclistas en Países Bajos (dataset completo)
+Variable objetivo: severity_label (clasificación multiclase)
+Clases: injury | material damage only | fatal
+================================================================================
+
+A) METODOLOGÍA CRISP-DM
+--------------------------------------------------------------------------------
+
+Resumen de comprensión del negocio y los datos
+----------------------------------------------
+El proyecto busca modelar la severidad de accidentes con ciclistas en municipios holandeses,
+prediciendo la clase `severity_label` a partir del contexto del siniestro (vía, clima, luz,
+velocidad, provincia, infraestructura ciclista municipal).
+
+Los datos provienen de registros oficiales (`accidents.csv`, 56.743 filas) complementados con
+`gemeenten.csv`, `cycling_infrastructure_osm.csv`, `weather_stations.csv` y `weather_daily.csv`
+(agregación anual por estación KNMI → municipio → fallback nacional).
+
+Justificación de la elección del dataset:
+- Caso real con impacto en seguridad vial y política pública.
+- Variable objetivo clara con tres clases interpretables para multiclase.
+- Permite fusionar por `gemeente_code` y practicar CRISP-DM de punta a punta.
+
+Perspectiva comercial
+---------------------
+
+1. ¿Qué espera obtener de este proyecto?
+   Un modelo que estime si un accidente será lesión, solo daño material o fatal, para priorizar
+   intervenciones (infraestructura, velocidad, iluminación) según el nivel de severidad esperado.
+
+2. ¿Cómo define la finalización de los trabajos?
+   Dataset completo preparado, AED documentado, perfil ydata_profiling, tabla minable con
+   `severity_label` como target y métricas baseline de clasificación multiclase (fase Modelado).
+
+3. ¿Dispone de la dotación presupuestaria y recursos necesarios?
+   Sí en contexto académico (Python, pandas, software libre). En despliegue real se requeriría
+   equipo de movilidad urbana y presupuesto operativo.
+
+4. ¿Dispone de acceso a todos los datos necesarios?
+   Sí. Se integran accidents, gemeenten, infraestructura ciclista, weather_stations y weather_daily.
+
+5. ¿Ha tratado riesgos y contingencias con su equipo?
+   Sí. Riesgos: valores `\N`, desbalance de clases (fatal ~1 %), cardinalidad alta en dummies.
+   Contingencia: documentar decisiones, usar métricas stratified (F1 macro, balanced accuracy).
+
+6. ¿El análisis coste/beneficio hace viable el proyecto?
+   Sí. Coste de análisis bajo frente al beneficio de orientar políticas de prevención.
+
+Perspectiva de ciencia de datos
+-------------------------------
+
+7. ¿En qué forma puede ayudarle la ciencia de datos a cumplir objetivos comerciales?
+   Clasificación multiclase de severidad, análisis de variables por clase, mapas de riesgo por
+   provincia y escenarios (lluvia + noche + tipo de vía).
+
+8. ¿Sabe qué técnicas producen los mejores resultados?
+   Random Forest, XGBoost, regresión logística multinomial; SMOTE o class_weight para la clase
+   minoritaria `fatal`; validación estratificada por `severity_label`.
+
+9. ¿Cómo se implementarán los resultados del modelado?
+   Informes para autoridades locales, dashboards con probabilidad por clase y recomendaciones
+   diferenciadas (p. ej. fatal vs. daño material).
+
+10. ¿El plan incluye todas las fases de CRISP-DM?
+    Sí hasta Preparación de datos (este entregable). Modelado, Evaluación e Implementación planificadas.
+
+11. ¿Los riesgos y dependencias se incluyen en el plan?
+    Sí. Calidad del registro, nulos, fusión por `gemeente_code` y desbalance multiclase documentados.
+
+
+B) COMPRENSIÓN DE DATOS – AED (dataset completo)
+--------------------------------------------------------------------------------
+
+Variables relevantes
+--------------------
+- Objetivo: severity_label (y severity_code solo para validación, no como predictor)
+- Temporal: year
+- Vía: accident_type, road_situation, speed_limit_kmh
+- Entorno: road_lighting, light_condition_label, weather_label
+- Geografía: province, gemeente_code, latitude, longitude
+- Participantes: party_count, cyclists_involved, alcohol_indicated
+
+Hallazgos del dataset completo (56.743 filas)
+---------------------------------------------
+- Clases de severity_label:
+    injury: 30.334 (53,46 %)
+    material damage only: 25.836 (45,53 %)
+    fatal: 573 (1,01 %)
+- Mapeo severity_code: 1=fatal, 2=injury, 4=material damage only
+- Valores faltantes `\N` frecuentes en infra_type, road_segment_id, speed_limit_kmh, etc.
+- Tras filtros (ciclistas, coordenadas NL, year >= 2022): se mantienen 56.743 filas (el dataset
+  ya cumple esas condiciones en su totalidad).
+- Sin duplicados por accident_id.
+
+Análisis univariado (resumen)
+-----------------------------
+- Predomina injury sobre material damage only; fatal es clase minoritaria.
+- speed_limit_kmh concentrado en 30, 50 y 80 km/h (mediana imputada: 50).
+- accident_type: Flank muy frecuente.
+- Provincias más representadas: Noord-Holland, Zuid-Holland, Gelderland.
+
+Análisis bivariado (resumen)
+----------------------------
+- severity_label vs weather_label: lluvia asociada a mayor proporción de injury.
+- severity_label vs light_condition_label: oscuridad con mayor peso relativo de injury/fatal.
+- severity_label vs speed_limit_kmh: lesiones frecuentes a 50 km/h.
+
+Perfilado ydata_profiling
+-------------------------
+ProfileReport sobre el dataset completo (puede tardar varios minutos). Documenta tipos,
+cardinalidad, missing values y correlaciones.
+
+Preguntas – Comprensión de datos
+---------------------------------
+
+1. ¿Cuál es su nivel de comprensión de los datos?
+   Alto tras AED sobre el dataset completo. Estructura, target multiclase y calidad conocidos.
+
+2. ¿Ha identificado y accedido correctamente a todos los orígenes?
+   Sí. Cinco tablas cargadas en el notebook (ver sección Tablas utilizadas).
+
+3. ¿Ha identificado atributos clave?
+   Sí: severity_label (objetivo), province, accident_type, speed_limit_kmh, weather_label,
+   periodo_luz, gemeente_code.
+
+4. ¿Le han ayudado a formular hipótesis?
+   Sí. H1: lluvia/oscuridad aumentan probabilidad de injury/fatal. H2: menor km_total correlaciona
+   con mayor proporción de clases graves. H3: rotondas concentran accidentes tipo Flank.
+
+5. ¿Ha detectado el tamaño de todos los orígenes?
+   Sí. accidents.csv: 56.743; weather_daily: 134.571; gemeente_yearly_summary: 3.420;
+   gemeenten e infraestructura: ~342 filas cada uno.
+
+6. ¿Puede utilizar un subconjunto cuando lo estime conveniente?
+   Sí, pero este entregable usa el **dataset completo** según requerimiento del proyecto.
+
+7. ¿Ha calculado estadísticos básicos?
+   Sí. describe(), value_counts(), isnull().sum(), agrupaciones por provincia y severidad.
+
+8. ¿Ha utilizado gráficos de exploración?
+   Sí. Barras, histogramas, boxplot, heatmap y crosstabs. Refinaron hipótesis sobre luz y clima.
+
+9. ¿Problemas de calidad y planificación?
+   - `\N` → NaN con missing_marker = chr(92)+'N'
+   - Imputación speed_limit_kmh (mediana 50), weather_label ('unknown'), infra_type (categoría)
+   - Exclusión de severity_code/raw del modelo (fuga de información)
+
+10. ¿Las fases de preparación son claras?
+    Sí. Merge por gemeente_code; one-hot de predictores; severity_label solo como target final.
+
+
+C) PREPARACIÓN DE DATOS POR COLUMNAS
+--------------------------------------------------------------------------------
+
+1. Conversión de tipos
+   - year → int64; speed_limit_kmh y severity_code → numérico
+   - severity_label, province, accident_type → category
+   - alcohol_indicated, built_up_area → bool
+
+2. Tratamiento de \N e imputación
+   - Reemplazo global `\N` por NaN
+   - speed_limit_kmh: mediana 50 km/h
+   - weather_label: 'unknown'; infra_type: 'sin_infraestructura_registrada'
+
+3. Creación de columnas e integración de clima
+   - periodo_luz (dia / noche / otro) desde light_condition_label
+   - km_total, bicycle_parking_count, population, population_density_km2 vía merge
+   - Clima desde weather_daily + weather_stations:
+     * Agregación anual por station_id (temp, precipitación, viento, sol, humedad, presión)
+     * Enlace station → nearest_gemeente_code → promedio por gemeente_code + year
+     * Imputación con promedio nacional del mismo año si el municipio no tiene estación (~92 %)
+     * Flag weather_desde_estacion: True si el clima viene de estación municipal (8,18 %)
+
+
+D) PREPARACIÓN DE DATOS POR FILAS
+--------------------------------------------------------------------------------
+
+1. Eliminación de duplicados: drop_duplicates por accident_id (0 duplicados en dataset completo)
+
+2. Filtrado
+   - cyclists_involved == 1
+   - Coordenadas dentro de Países Bajos (lat 50.5–53.7, lon 3.0–7.5)
+   - year >= 2022
+
+3. Agrupación
+   - Por province y severity_label
+   - Por year y province (conteos de fatales y lesiones)
+   - Por periodo_luz y severity_label
+
+
+E) TABLA MINABLE – CLASIFICACIÓN MULTICLASE
+--------------------------------------------------------------------------------
+
+Variable objetivo
+-----------------
+**severity_label** (última columna del CSV exportado)
+
+| Clase | Código severity_code | Registros | % |
+|-------|---------------------|-----------|---|
+| injury | 2 | 30.334 | 53,46 |
+| material damage only | 4 | 25.836 | 45,53 |
+| fatal | 1 | 573 | 1,01 |
+
+TABLAS UTILIZADAS EN LA SOLUCIÓN
+--------------------------------
+1. accidents.csv          – Hechos de accidentes (tabla principal)
+2. gemeenten.csv          – Población y densidad por municipio
+3. cycling_infrastructure_osm.csv – Km de ciclovías y aparcamientos
+4. weather_stations.csv   – Estaciones KNMI y municipio más cercano
+5. weather_daily.csv      – Mediciones diarias → agregadas a nivel anual
+
+Predictores en tabla minable
+----------------------------
+- Numéricos/booleanos: year, party_count, speed_limit_kmh, latitude, longitude,
+  alcohol_indicated, built_up_area, cyclists_involved, km_total, bicycle_parking_count,
+  population, population_density_km2
+- Clima (8 variables + flag): weather_temp_mean_c, weather_temp_min_c, weather_temp_max_c,
+  weather_precip_mm_total, weather_wind_mean_ms, weather_sunshine_hours_total,
+  weather_humidity_mean_pct, weather_pressure_mean_hpa, weather_desde_estacion
+- One-hot (39 columnas): province, accident_type, weather_label, periodo_luz,
+  road_situation, road_lighting
+
+Excluido del modelo (evitar fuga)
+----------------------------------
+severity_code, severity_raw, accident_id, textos libres, tipos de parte, gemeente_code, etc.
+
+Estructura exportada
+--------------------
+- Filas: 56.743
+- Columnas: 62 (61 predictores + severity_label)
+- Clima municipal directo (estación): 8,18 % de registros; el resto usa promedio nacional anual
+- Archivo: dataset/tabla_minable_accidentes.csv
+
+Uso en modelado multiclase (siguiente fase)
+-------------------------------------------
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+df = pd.read_csv('dataset/tabla_minable_accidentes.csv')
+y = df['severity_label']
+X = df.drop(columns=['severity_label'])
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+```
+Recomendación: class_weight='balanced' o SMOTE para la clase fatal.
+
+
+PREGUNTAS – PREPARACIÓN DE DATOS
+--------------------------------------------------------------------------------
+
+1. ¿Cuál es su nivel de preparación de los datos?
+   Alto. Dataset completo listo para clasificación multiclase.
+
+2. ¿Puede acceder a todos los datos?
+   Sí.
+
+3. ¿Ha seleccionado subconjuntos relevantes?
+   Se usa el dataset completo; filtros de calidad aplicados sin reducir filas en este caso.
+
+4. ¿Ha limpiado los datos efectivamente?
+   Sí. `\N`, imputación, duplicados, filtros geográficos y temporales.
+
+5. ¿Decisiones registradas?
+   Sí, en este archivo y en Caso_Real_CRISP_DM.ipynb.
+
+6. ¿Los conjuntos se integran correctamente?
+   Sí por gemeente_code. Accidentes sin código municipal quedan con NaN en variables de merge
+   (rellenados con 0 en tabla minable).
+
+7. ¿Conoce las herramientas de modelado planificadas?
+   Sí. sklearn: LogisticRegression(multi_class), RandomForestClassifier, XGBClassifier;
+   métricas: classification_report, confusion_matrix, F1 macro.
+
+8. ¿Existen problemas de formato antes del modelado?
+   - Desbalance multiclase (fatal 1 %): usar estratificación y pesos de clase.
+   - severity_label en formato texto: compatible con la mayoría de estimadores sklearn
+     (LabelEncoder opcional si el algoritmo requiere enteros).
+   - No incluir severity_code como predictor.
+
+================================================================================
+Fin del informe – Caso_Real_CRISP_DM.ipynb | Target: severity_label (multiclase)
+================================================================================

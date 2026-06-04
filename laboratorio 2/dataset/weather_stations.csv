@@ -1,0 +1,39 @@
+station_id,latitude,longitude,altitude_m,station_name,nearest_gemeente_code,nearest_gemeente_name
+209,52.465,4.518,-0.2,IJmond,GM0453,Velsen
+210,52.171,4.43,1.5,Valkenburg,GM0537,Katwijk
+215,52.141,4.432,1.1,Voorschoten,GM0626,Voorschoten
+225,52.463,4.575,4.4,IJmuiden,GM0453,Velsen
+235,52.924,4.785,1.2,De Kooy,GM0400,Den Helder
+240,52.318,4.79,-3.3,Schiphol,GM0362,Amstelveen
+242,53.241,4.904,1.0,Vlieland,GM0096,Vlieland
+249,52.644,5.174,-2.4,Berkhout,GM0498,Drechterland
+251,53.392,5.346,0.7,Hoorn (Terschelling),GM0093,Terschelling
+257,52.506,5.864,-1.2,Wijk aan Zee,GM0166,Kampen
+260,52.1,5.18,2.0,De Bilt,GM0310,De Bilt
+267,52.898,5.384,-1.3,Stavoren,GM1900,Súdwest-Fryslân
+269,52.458,6.196,11.0,Lelystad,GM0148,Dalfsen
+270,53.224,5.752,1.2,Leeuwarden,GM0080,Leeuwarden
+273,52.703,5.888,-3.3,Marknesse,GM0171,Noordoostpolder
+275,52.056,5.888,48.2,Deelen,GM0277,Rozendaal
+277,53.413,6.197,-0.7,Lauwersoog,GM0088,Schiermonnikoog
+278,52.435,6.259,3.6,Heino,GM0177,Raalte
+279,52.75,6.575,15.8,Hoogeveen,GM0118,Hoogeveen
+280,53.125,6.585,5.2,Eelde,GM1730,Tynaarlo
+283,52.644,6.657,29.1,Hupsel,GM0160,Hardenberg
+285,53.575,6.657,0.0,Huibertgat,GM1966,Het Hogeland
+286,52.375,6.891,24.0,Nieuw Beerta,GM1774,Dinkelland
+290,52.274,6.891,34.8,Twenthe,GM0173,Oldenzaal
+310,51.442,3.596,8.0,Vlissingen,GM0718,Vlissingen
+319,51.226,3.861,1.5,Westdorpe,GM0715,Terneuzen
+323,51.527,3.884,1.4,Wilhelminadorp,GM0664,Goes
+330,51.992,4.122,-0.4,Hoek van Holland,GM1783,Westland
+340,51.449,4.342,19.2,Woensdrecht,GM0873,Woensdrecht
+344,51.962,4.447,-4.3,Rotterdam,GM0606,Schiedam
+348,51.52,4.926,0.0,Cabauw,GM1723,Alphen-Chaam
+350,51.566,4.936,14.9,Gilze-Rijen,GM0784,Gilze en Rijen
+356,51.859,5.146,7.0,Herwijnen,GM1960,West Betuwe
+370,51.451,5.377,22.6,Eindhoven,GM0861,Veldhoven
+375,51.659,5.707,22.0,Volkel,GM1991,Maashorst
+377,51.198,5.763,30.0,Ell,GM0988,Weert
+380,51.224,5.76,29.1,Maastricht,GM0988,Weert
+391,51.498,6.197,19.5,Arcen,GM0983,Venlo
