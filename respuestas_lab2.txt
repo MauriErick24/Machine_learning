@@ -1,0 +1,147 @@
+====================================================================
+RESPUESTAS - Laboratorio 2: Modelo de Aprendizaje Automático
+====================================================================
+
+a) Introduccion
+--------------------------------------------------------------------
+Conjunto de datos: Accidentes ciclistas en Paises Bajos (2022-2024).
+- Problema: Predecir la severidad de accidentes con ciclistas.
+- Objetivo: Clasificar la severidad en 3 categorias (Fatal, Lesion, Danos materiales).
+- Variables: 27 columnas originales en accidents.csv (incluyen tipo de accidente,
+  condiciones de luz, clima, velocidad, ubicacion, etc.) + 14 columnas del summary
+  municipal (infraestructura ciclista, clima anual, poblacion).
+- Observaciones: 56,743 registros de accidentes.
+
+b) Justificacion de la eleccion del tipo de modelo
+--------------------------------------------------------------------
+Se trata de un problema de CLASIFICACION SUPERVISADA porque:
+- La variable objetivo (severity_code) es categorica (1=Fatal, 2=Lesion, 4=Danos).
+- Se busca predecir una categoria, no un valor continuo.
+- El analisis exploratorio (ANOVA, Chi-cuadrado) confirmo que variables como
+  speed_limit, alcohol_indicated, light_condition, accident_type, etc. tienen
+  relaciones estadisticamente significativas con la severidad (p < 0.001).
+- Hay desbalance severo: Fatal 1%, Lesion 53.5%, Danos 45.5%.
+
+c) Desarrollo del modelo
+
+c.1 Preparacion final de los datos
+--------------------------------------------------------------------
+Division en conjunto de entrenamiento y prueba:
+- Split estratificado 80/20 manteniendo proporcion de clases.
+- Train: 45,394 registros | Test: 11,349 registros.
+- Preprocesamiento: Imputacion de nulos (mediana por grupo para clima,
+  mediana condicional para velocidad segun tipo de via, moda para categoricas).
+- One-Hot Encoding (8 columnas -> 143 columnas) + Target Encoding
+  (province, accident_type -> 2 columnas numericas).
+- Escalado con StandardScaler (24 features numericas).
+- Feature engineering: km_per_capita, parking_per_capita, fatal_kde,
+  interacciones domain-driven, spatial clustering DBSCAN.
+- SMOTE solo en train para balancear clase Fatal (de 458 a 3000 muestras).
+
+c.2 Entrenamiento del modelo
+--------------------------------------------------------------------
+Modelos candidatos entrenados y comparados:
+1. Decision Tree (baseline, max_depth=10)
+2. Random Forest (n_estimators=500, class_weight='balanced')
+3. XGBoost (n_estimators=500, scale_pos_weight={1:5})
+4. HistGradientBoosting (max_iter=300)
+5. Extra Trees (n_estimators=500, class_weight='balanced')
+6. Random Forest + Threshold Tuning (umbral optimo via curva PR)
+7. Stacking (RF + ET + XGBoost + Logistic meta, cv=3)
+8. Soft Voting (RF + XGB)
+9. Stacking Calibrado (con calibracion Platt)
+10. XGBoost 33x (peso extremo en Fatal)
+
+c.3 Evaluacion
+--------------------------------------------------------------------
+Metricas utilizadas:
+- Accuracy (referencial, no confiable por desbalance)
+- Precision, Recall, F1-score por clase
+- Macro F1 (promedio del F1 de cada clase, metrica principal)
+- Matriz de confusion
+- Curvas ROC y AUC para clase Fatal
+
+Respuestas:
+
+? Que tipo de problema se esta resolviendo y que tecnica de modelado
+es la mas adecuada?
+- Problema: Clasificacion supervisada multiclase (3 clases: Fatal, Lesion,
+  Danos materiales) con desbalance extremo (clase minoritaria Fatal = 1%).
+- Tecnica mas adecuada: Modelos basados en arboles (Random Forest, XGBoost)
+  que manejan bien datos tabulares con mixtura de variables numericas y
+  categoricas, y soportan class_weight para el desbalance.
+
+? Como se dividiran y validaran los datos para probar el modelo de
+manera justa?
+- Division estratificada 80/20 (train/test) manteniendo la proporcion de
+  clases en ambos conjuntos.
+- SMOTE aplicado SOLO en train para evitar contaminar el test con muestras
+  sinteticas.
+- Preprocesamiento (imputacion, encoding, escalado) ajustado SOLO en train
+  y luego transformado en test (sin data leakage).
+
+? Que modelos candidatos se van a entrenar y comparar?
+- Decision Tree (baseline interpretable)
+- Random Forest (ensemble de arboles con bagging)
+- XGBoost (gradient boosting con pesos)
+- HistGradientBoosting (gradient boosting histogram-based)
+- Extra Trees (randomizacion extrema)
+- RF + Threshold Tuning (ajuste de umbral de decision)
+- Stacking (RF + ET + XGB + Logistic Regression como meta-modelo)
+- Soft Voting (RF + XGB)
+- Stacking Calibrado (con calibracion Platt)
+- XGBoost 33x (peso extremo, experimento comparativo)
+
+? Que metricas se usaran para evaluar el desempeno del modelo?
+- Macro F1 (metrica principal, promedio del F1 de cada clase)
+- F1-score por clase (especialmente Fatal por ser la clase critica)
+- Precision y Recall por clase
+- Matriz de confusion (normalizada por filas)
+- Curva ROC y AUC para clase Fatal (One-vs-Rest)
+
+? Cual modelo se selecciona como mejor y por que?
+- Mejor modelo general: Soft Voting (RF+XGB) con macro F1=0.55 y AUC=0.71.
+- Mejor para capturar fatales: XGBoost 5x con Fatal F1=0.30 (el mas alto).
+- Soft Voting combina las fortalezas de Random Forest (estabilidad) y
+  XGBoost (potencia de gradient boosting), logrando el mejor equilibrio
+  entre las 3 clases y el AUC mas alto en la curva ROC para Fatal.
+
+c.4 Conclusion
+--------------------------------------------------------------------
+? Que se aprendio del modelado?
+- El desbalance extremo (Fatal = 1%) requiere tecnicas especiales: SMOTE,
+  class_weight, y metricas como macro F1 en lugar de accuracy.
+- Los modelos basados en arboles (XGBoost, Random Forest) son adecuados
+  para datos tabulares con variables mixtas.
+- El ensamblaje (Soft Voting, Stacking) mejora el rendimiento general al
+  combinar fortalezas de distintos modelos.
+
+? Que hallazgos relevantes surgieron?
+- XGBoost con peso moderado (5x) en Fatal logra el mejor F1 para la clase
+  minoritaria (0.30).
+- Soft Voting RF+XGB alcanza macro F1=0.55, superando a los modelos
+  individuales.
+- El accuracy (~67%) es enganoso: un modelo que siempre predijera "Lesion"
+  obtendria ~53% sin aprender nada.
+- Extra Trees y XGBoost 33x (peso extremo) tienen peor desempeno.
+
+? Que limitaciones tuvo el modelo?
+- Fatal F1 maximo de 0.30 es bajo para aplicacion critica (seguridad vial).
+- Muchos falsos negativos en clase Fatal (solo ~30-45% de recall).
+- Las variables climaticas tienen ~91% de nulos, lo que reduce su utilidad.
+- SMOTE con solo 458 fatales reales genera muestras sinteticas que pueden
+  introducir ruido.
+
+? Como podria mejorarse?
+- Recopilar mas datos historicos de accidentes fatales (la muestra actual
+  de 573 es muy pequena).
+- Incorporar variables adicionales: tipo de vehiculo involucrado, uso de
+  casco, estado de la via, senalizacion.
+- Probar redes neuronales profundas con datos enriquecidos.
+- Utilizar tecnicas de aprendizaje semi-supervisado o anomaly detection
+  para mejorar deteccion de fatales.
+- Segmentar el modelo: primero clasificar Fatal vs No-Fatal, luego
+  Lesion vs Danos (approaching jerarquico).
+- Balancear con tecnicas mas avanzadas como GAN-based oversampling o
+  cost-sensitive learning optimizado.
+====================================================================
